@@ -6,35 +6,43 @@ const PLANS = [
     name: 'Starter',
     price: 3000,
     color: '#0ea5e9',
+    dailyLimit: 1,
+    popular: false,
     features: [
       'Suppression de fond IA',
-      'Fonds personnalisés & dégradés',
-      'Export PNG illimité',
+      'Try-on vêtement sur avatar',
+      'Vidéo avatar animée (MP4)',
+      '1 vidéo générée par jour',
     ],
-    unlocks: ['bgremove'],
+    unlocks: ['bgremove', 'tryon', 'video'],
   },
   {
     id: 'pro',
     name: 'Pro',
     price: 6000,
     color: '#8b5cf6',
+    dailyLimit: 2,
     popular: true,
     features: [
-      'Tout Starter inclus',
-      'Try-on vêtement sur avatar IA',
-      '10 essais try-on',
+      'Suppression de fond IA',
+      'Try-on vêtement sur avatar',
+      'Vidéo avatar animée (MP4)',
+      '2 vidéos générées par jour',
     ],
-    unlocks: ['bgremove', 'tryon'],
+    unlocks: ['bgremove', 'tryon', 'video'],
   },
   {
     id: 'studio',
     name: 'Studio',
     price: 9000,
     color: '#f59e0b',
+    dailyLimit: 3,
+    popular: false,
     features: [
-      'Tout Pro inclus',
+      'Suppression de fond IA',
+      'Try-on vêtement sur avatar',
       'Vidéo avatar animée (MP4)',
-      '3 vidéos générées',
+      '3 vidéos générées par jour',
     ],
     unlocks: ['bgremove', 'tryon', 'video'],
   },
@@ -43,7 +51,7 @@ const PLANS = [
 const WA_NUMBER = '22890643185'
 
 function PaymentModal({ plan, onClose, onSuccess }) {
-  const [step, setStep] = useState('instructions') // instructions | verify
+  const [step, setStep] = useState('instructions')
   const [ref, setRef] = useState('')
   const [error, setError] = useState('')
 
@@ -66,7 +74,7 @@ function PaymentModal({ plan, onClose, onSuccess }) {
           <>
             <div className="modal-icon">📱</div>
             <h3>Payer {plan.price.toLocaleString()} XOF</h3>
-            <p className="modal-sub">via Mixx by Yas (T-Money)</p>
+            <p className="modal-sub">via Mixx by Yas · {plan.dailyLimit} vidéo{plan.dailyLimit > 1 ? 's' : ''}/jour</p>
 
             <div className="payment-steps">
               <div className="pay-step">
@@ -129,17 +137,24 @@ export default function PricingPage({ onPlanSelected }) {
   const [activePlan, setActivePlan] = useState(null)
 
   const handleSuccess = (plan, ref) => {
-    // Stocker l'accès en localStorage
-    const access = { plan: plan.id, unlocks: plan.unlocks, ref, date: new Date().toISOString() }
+    const today = new Date().toISOString().slice(0, 10)
+    const access = {
+      plan: plan.id,
+      unlocks: plan.unlocks,
+      dailyLimit: plan.dailyLimit,
+      ref,
+      date: today,
+    }
     localStorage.setItem('kaliroom_access', JSON.stringify(access))
+    localStorage.setItem('kaliroom_quota', JSON.stringify({ date: today, count: 0 }))
     setActivePlan(null)
-    onPlanSelected(plan)
+    onPlanSelected(access)
   }
 
   return (
     <div className="pricing-page">
-      <h1 className="pricing-title">Choisissez votre formule</h1>
-      <p className="pricing-sub">Payez une fois, utilisez immédiatement</p>
+      <h1 className="pricing-title">Créez vos vidéos marketing IA</h1>
+      <p className="pricing-sub">Suppression de fond · Try-on vêtement · Vidéo avatar animée</p>
 
       <div className="pricing-grid">
         {PLANS.map((plan) => (
@@ -149,7 +164,7 @@ export default function PricingPage({ onPlanSelected }) {
               <h2>{plan.name}</h2>
               <div className="plan-price">
                 <span className="price-amount">{plan.price.toLocaleString()}</span>
-                <span className="price-currency">XOF</span>
+                <span className="price-currency">XOF / jour</span>
               </div>
             </div>
             <ul className="plan-features">

@@ -357,10 +357,8 @@ export default function App() {
   const [mode, setMode] = useState('bgremove')
   const [file, setFile] = useState(null)
 
-  const canUse = (feature) => access?.unlocks?.includes(feature)
-
-  const handlePlanSelected = (plan) => {
-    setAccess({ plan: plan.id, unlocks: plan.unlocks })
+  const handlePlanSelected = (access) => {
+    setAccess(access)
   }
 
   const handleLogout = () => {
@@ -400,10 +398,7 @@ export default function App() {
       )}
 
       {mode === 'avatar' && (
-        <AvatarStudio
-          canTryOn={canUse('tryon')}
-          canVideo={canUse('video')}
-        />
+        <AvatarStudio dailyLimit={access.dailyLimit || 1} />
       )}
 
       <WhatsAppButton />

@@ -1039,6 +1039,51 @@
 
 .ref-input:focus { border-color: var(--accent); }
 
+/* ─── Quota bar ─────────────────────────────────── */
+
+.quota-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.quota-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.quota-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.quota-dot.available { background: var(--success); }
+.quota-dot.used { background: var(--border); }
+
+.quota-bar strong { color: var(--text); margin-left: auto; }
+
+.quota-exhausted {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  background: var(--surface2);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.quota-exhausted span { font-size: 36px; }
+
 /* ─── WhatsApp floating button ──────────────────── */
 
 .wa-btn {
