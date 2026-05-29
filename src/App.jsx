@@ -398,7 +398,7 @@ export default function App() {
       )}
 
       {mode === 'avatar' && (
-        <AvatarStudio dailyLimit={access.dailyLimit || 1} />
+        <AvatarStudio dailyLimit={access.dailyLimit || 1} totalLimit={access.totalLimit || 30} />
       )}
 
       <WhatsAppButton />

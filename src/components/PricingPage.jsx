@@ -7,12 +7,15 @@ const PLANS = [
     price: 3000,
     color: '#0ea5e9',
     dailyLimit: 1,
+    totalLimit: 30,
+    days: 30,
     popular: false,
     features: [
       'Suppression de fond IA',
       'Try-on vêtement sur avatar',
       'Vidéo avatar animée (MP4)',
-      '1 vidéo générée par jour',
+      '1 vidéo par jour',
+      '30 vidéos au total · 30 jours',
     ],
     unlocks: ['bgremove', 'tryon', 'video'],
   },
@@ -22,12 +25,15 @@ const PLANS = [
     price: 6000,
     color: '#8b5cf6',
     dailyLimit: 2,
+    totalLimit: 60,
+    days: 30,
     popular: true,
     features: [
       'Suppression de fond IA',
       'Try-on vêtement sur avatar',
       'Vidéo avatar animée (MP4)',
-      '2 vidéos générées par jour',
+      '2 vidéos par jour',
+      '60 vidéos au total · 30 jours',
     ],
     unlocks: ['bgremove', 'tryon', 'video'],
   },
@@ -37,12 +43,15 @@ const PLANS = [
     price: 9000,
     color: '#f59e0b',
     dailyLimit: 3,
+    totalLimit: 90,
+    days: 30,
     popular: false,
     features: [
       'Suppression de fond IA',
       'Try-on vêtement sur avatar',
       'Vidéo avatar animée (MP4)',
-      '3 vidéos générées par jour',
+      '3 vidéos par jour',
+      '90 vidéos au total · 30 jours',
     ],
     unlocks: ['bgremove', 'tryon', 'video'],
   },
@@ -74,7 +83,9 @@ function PaymentModal({ plan, onClose, onSuccess }) {
           <>
             <div className="modal-icon">📱</div>
             <h3>Payer {plan.price.toLocaleString()} XOF</h3>
-            <p className="modal-sub">via Mixx by Yas · {plan.dailyLimit} vidéo{plan.dailyLimit > 1 ? 's' : ''}/jour</p>
+            <p className="modal-sub">
+              via Mixx by Yas · {plan.totalLimit} vidéos sur {plan.days} jours
+            </p>
 
             <div className="payment-steps">
               <div className="pay-step">
@@ -138,12 +149,18 @@ export default function PricingPage({ onPlanSelected }) {
 
   const handleSuccess = (plan, ref) => {
     const today = new Date().toISOString().slice(0, 10)
+    const expiryDate = new Date()
+    expiryDate.setDate(expiryDate.getDate() + plan.days)
+
     const access = {
       plan: plan.id,
       unlocks: plan.unlocks,
       dailyLimit: plan.dailyLimit,
+      totalLimit: plan.totalLimit,
+      totalUsed: 0,
+      startDate: today,
+      expiryDate: expiryDate.toISOString().slice(0, 10),
       ref,
-      date: today,
     }
     localStorage.setItem('kaliroom_access', JSON.stringify(access))
     localStorage.setItem('kaliroom_quota', JSON.stringify({ date: today, count: 0 }))
@@ -164,7 +181,7 @@ export default function PricingPage({ onPlanSelected }) {
               <h2>{plan.name}</h2>
               <div className="plan-price">
                 <span className="price-amount">{plan.price.toLocaleString()}</span>
-                <span className="price-currency">XOF / jour</span>
+                <span className="price-currency">XOF / 30 jours</span>
               </div>
             </div>
             <ul className="plan-features">

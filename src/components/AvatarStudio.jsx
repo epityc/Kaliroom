@@ -15,7 +15,11 @@ const STEPS = ['Avatar', 'Vêtement', 'Vidéo']
 
 // ─── Quota helpers ───────────────────────────────────────────────────────────
 
-function getQuota() {
+function getAccess() {
+  try { return JSON.parse(localStorage.getItem('kaliroom_access') || 'null') } catch { return null }
+}
+
+function getDailyQuota() {
   try {
     const today = new Date().toISOString().slice(0, 10)
     const raw = localStorage.getItem('kaliroom_quota')
@@ -26,10 +30,21 @@ function getQuota() {
 }
 
 function incrementQuota() {
-  const q = getQuota()
+  // daily
+  const q = getDailyQuota()
   q.count += 1
   localStorage.setItem('kaliroom_quota', JSON.stringify(q))
-  return q.count
+  // total
+  const access = getAccess()
+  if (access) {
+    access.totalUsed = (access.totalUsed || 0) + 1
+    localStorage.setItem('kaliroom_access', JSON.stringify(access))
+  }
+}
+
+function isExpired(access) {
+  if (!access?.expiryDate) return false
+  return new Date().toISOString().slice(0, 10) > access.expiryDate
 }
 
 // ─── Step bar ────────────────────────────────────────────────────────────────
@@ -164,18 +179,30 @@ function Step2TryOn({ avatar, onNext }) {
 
 // ─── Step 3 : Vidéo ──────────────────────────────────────────────────────────
 
-function Step3Video({ tryOnImage, dailyLimit }) {
+function Step3Video({ tryOnImage, dailyLimit, totalLimit }) {
   const [loading, setLoading] = useState(false)
   const [videoUrl, setVideoUrl] = useState(null)
   const [error, setError] = useState(null)
   const [script, setScript] = useState("Bonjour ! Découvrez notre nouvelle collection, élégante et tendance.")
 
-  const quota = getQuota()
-  const remaining = dailyLimit - quota.count
-  const exhausted = remaining <= 0
+  const access = getAccess()
+  const expired = isExpired(access)
+  const totalUsed = access?.totalUsed || 0
+  const totalRemaining = totalLimit - totalUsed
+
+  const dailyQuota = getDailyQuota()
+  const dailyRemaining = dailyLimit - dailyQuota.count
+  const dailyExhausted = dailyRemaining <= 0
+  const totalExhausted = totalRemaining <= 0
+
+  const daysLeft = access?.expiryDate
+    ? Math.max(0, Math.ceil((new Date(access.expiryDate) - new Date()) / 86400000))
+    : 0
+
+  const blocked = expired || totalExhausted || dailyExhausted
 
   const handleGenerate = async () => {
-    if (exhausted) return
+    if (blocked) return
     setLoading(true)
     setError(null)
     try {
@@ -194,22 +221,35 @@ function Step3Video({ tryOnImage, dailyLimit }) {
       <h2>Générer la vidéo</h2>
       <p className="step-desc">L'avatar prononcera votre texte et bougera naturellement</p>
 
-      <div className="quota-bar">
-        <span>Vidéos restantes aujourd'hui</span>
-        <div className="quota-dots">
-          {Array.from({ length: dailyLimit }).map((_, i) => (
-            <span key={i} className={`quota-dot ${i < remaining ? 'available' : 'used'}`} />
-          ))}
+      {/* Compteurs */}
+      <div className="quota-board">
+        <div className="quota-cell">
+          <span className="quota-val">{dailyRemaining}</span>
+          <span className="quota-lbl">vidéo{dailyRemaining > 1 ? 's' : ''} aujourd'hui</span>
         </div>
-        <strong>{remaining}/{dailyLimit}</strong>
+        <div className="quota-sep" />
+        <div className="quota-cell">
+          <span className="quota-val">{totalRemaining}</span>
+          <span className="quota-lbl">vidéos restantes</span>
+        </div>
+        <div className="quota-sep" />
+        <div className="quota-cell">
+          <span className="quota-val">{daysLeft}</span>
+          <span className="quota-lbl">jours restants</span>
+        </div>
       </div>
 
-      {exhausted ? (
-        <div className="quota-exhausted">
-          <span>⏳</span>
-          <p>Quota journalier atteint. Revenez demain ou passez à une formule supérieure.</p>
-        </div>
-      ) : (
+      {expired && (
+        <div className="quota-exhausted"><span>📅</span><p>Votre abonnement a expiré. Renouvelez pour continuer.</p></div>
+      )}
+      {!expired && totalExhausted && (
+        <div className="quota-exhausted"><span>🎬</span><p>Vous avez utilisé vos {totalLimit} vidéos. Renouvelez votre abonnement.</p></div>
+      )}
+      {!expired && !totalExhausted && dailyExhausted && (
+        <div className="quota-exhausted"><span>⏳</span><p>Quota journalier atteint ({dailyLimit}/jour). Revenez demain.</p></div>
+      )}
+
+      {!blocked && (
         <>
           <div className="script-box">
             <label className="script-label">Script de la vidéo</label>
@@ -223,9 +263,7 @@ function Step3Video({ tryOnImage, dailyLimit }) {
             />
             <span className="script-count">{script.length}/300</span>
           </div>
-
           {error && <div className="studio-error">{error}</div>}
-
           {!videoUrl && (
             <button className="studio-btn" onClick={handleGenerate} disabled={loading}>
               {loading ? '⏳ Génération en cours (~2 min)…' : '🎬 Générer la vidéo'}
@@ -240,11 +278,6 @@ function Step3Video({ tryOnImage, dailyLimit }) {
           <a className="studio-btn download-video" href={videoUrl} download="kaliroom-video.mp4">
             ↓ Télécharger MP4
           </a>
-          {remaining - 1 > 0 && (
-            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-              Il vous reste {remaining - 1} vidéo{remaining - 1 > 1 ? 's' : ''} aujourd'hui.
-            </p>
-          )}
         </div>
       )}
     </div>
@@ -253,7 +286,7 @@ function Step3Video({ tryOnImage, dailyLimit }) {
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export default function AvatarStudio({ dailyLimit = 1 }) {
+export default function AvatarStudio({ dailyLimit = 1, totalLimit = 30 }) {
   const [step, setStep] = useState(0)
   const [avatar, setAvatar] = useState(null)
   const [tryOnResult, setTryOnResult] = useState(null)
@@ -263,7 +296,7 @@ export default function AvatarStudio({ dailyLimit = 1 }) {
       <StepBar current={step} />
       {step === 0 && <Step1Avatar onNext={(av) => { setAvatar(av); setStep(1) }} />}
       {step === 1 && <Step2TryOn avatar={avatar} onNext={(r) => { setTryOnResult(r); setStep(2) }} />}
-      {step === 2 && <Step3Video tryOnImage={tryOnResult} dailyLimit={dailyLimit} />}
+      {step === 2 && <Step3Video tryOnImage={tryOnResult} dailyLimit={dailyLimit} totalLimit={totalLimit} />}
     </div>
   )
 }
