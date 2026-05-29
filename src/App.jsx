@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { removeBackground } from '@imgly/background-removal'
 import AvatarStudio from './components/AvatarStudio'
+import PricingPage, { PLANS } from './components/PricingPage'
 import './App.css'
 
 // ─── Couleurs & dégradés ────────────────────────────────────────────────────
@@ -33,7 +34,7 @@ const GRADIENTS = [
 
 // ─── Header ─────────────────────────────────────────────────────────────────
 
-function Header({ mode, onModeChange, onUploadNew }) {
+function Header({ mode, onModeChange, onUploadNew, plan, onLogout }) {
   return (
     <header className="header">
       <a className="logo" href="/">
@@ -42,16 +43,10 @@ function Header({ mode, onModeChange, onUploadNew }) {
       </a>
 
       <nav className="header-nav">
-        <button
-          className={`nav-tab ${mode === 'bgremove' ? 'active' : ''}`}
-          onClick={() => onModeChange('bgremove')}
-        >
+        <button className={`nav-tab ${mode === 'bgremove' ? 'active' : ''}`} onClick={() => onModeChange('bgremove')}>
           🖼️ Fond
         </button>
-        <button
-          className={`nav-tab ${mode === 'avatar' ? 'active' : ''}`}
-          onClick={() => onModeChange('avatar')}
-        >
+        <button className={`nav-tab ${mode === 'avatar' ? 'active' : ''}`} onClick={() => onModeChange('avatar')}>
           🎬 Avatar Studio
         </button>
       </nav>
@@ -59,6 +54,14 @@ function Header({ mode, onModeChange, onUploadNew }) {
       <div className="header-actions">
         {onUploadNew && mode === 'bgremove' && (
           <button className="btn btn-ghost" onClick={onUploadNew}>← Nouvelle image</button>
+        )}
+        {plan && (
+          <span className="plan-badge" style={{ background: plan.color }}>
+            {plan.name}
+          </span>
+        )}
+        {onLogout && (
+          <button className="btn btn-ghost" onClick={onLogout} title="Changer de formule">↩</button>
         )}
       </div>
     </header>
@@ -340,9 +343,45 @@ function WhatsAppButton() {
 
 // ─── App root ────────────────────────────────────────────────────────────────
 
+function getStoredAccess() {
+  try {
+    const raw = localStorage.getItem('kaliroom_access')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export default function App() {
+  const [access, setAccess] = useState(getStoredAccess)
   const [mode, setMode] = useState('bgremove')
   const [file, setFile] = useState(null)
+
+  const canUse = (feature) => access?.unlocks?.includes(feature)
+
+  const handlePlanSelected = (plan) => {
+    setAccess({ plan: plan.id, unlocks: plan.unlocks })
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('kaliroom_access')
+    setAccess(null)
+    setFile(null)
+    setMode('bgremove')
+  }
+
+  // Pas d'accès → page de tarification
+  if (!access) {
+    return (
+      <>
+        <Header mode={mode} onModeChange={setMode} />
+        <PricingPage onPlanSelected={handlePlanSelected} />
+        <WhatsAppButton />
+      </>
+    )
+  }
+
+  const currentPlan = PLANS.find((p) => p.id === access.plan)
 
   return (
     <>
@@ -350,15 +389,22 @@ export default function App() {
         mode={mode}
         onModeChange={(m) => { setMode(m); setFile(null) }}
         onUploadNew={file ? () => setFile(null) : null}
+        plan={currentPlan}
+        onLogout={handleLogout}
       />
 
-      {mode === 'bgremove' && (
+      {mode === 'bgremove' && canUse('bgremove') && (
         file
           ? <BgRemoveEditor file={file} onReset={() => setFile(null)} />
           : <LandingHero onFile={setFile} />
       )}
 
-      {mode === 'avatar' && <AvatarStudio />}
+      {mode === 'avatar' && (
+        <AvatarStudio
+          canTryOn={canUse('tryon')}
+          canVideo={canUse('video')}
+        />
+      )}
 
       <WhatsAppButton />
     </>

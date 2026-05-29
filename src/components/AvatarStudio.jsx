@@ -274,13 +274,25 @@ function Step4Video({ tryOnImage }) {
   )
 }
 
-export default function AvatarStudio() {
+export default function AvatarStudio({ canTryOn = false, canVideo = false }) {
   const [step, setStep] = useState(0)
   const [avatar, setAvatar] = useState(null)
   const [tryOnResult, setTryOnResult] = useState(null)
 
+  if (!canTryOn) {
+    return (
+      <div className="avatar-studio">
+        <div className="studio-step">
+          <div style={{ fontSize: 48 }}>🔒</div>
+          <h2>Formule Pro ou Studio requise</h2>
+          <p className="step-desc">L'Avatar Studio est disponible à partir de la formule Pro (6 000 XOF).</p>
+        </div>
+      </div>
+    )
+  }
+
   const handleStep1 = (av) => { setAvatar(av); setStep(1) }
-  const handleStep2 = (result) => { setTryOnResult(result); setStep(2) }
+  const handleStep2 = (result) => { setTryOnResult(result); setStep(canVideo ? 2 : 3) }
   const handleStep3 = () => setStep(3)
 
   return (
@@ -288,8 +300,8 @@ export default function AvatarStudio() {
       <StepBar current={step} />
       {step === 0 && <Step1Avatar onNext={handleStep1} />}
       {step === 1 && <Step2TryOn avatar={avatar} onNext={handleStep2} />}
-      {step === 2 && <Step3Payment onNext={handleStep3} onSimulate={handleStep3} />}
-      {step === 3 && <Step4Video tryOnImage={tryOnResult} />}
+      {step === 2 && canVideo && <Step3Payment onNext={handleStep3} onSimulate={handleStep3} />}
+      {step === 3 && <Step4Video tryOnImage={tryOnResult} canVideo={canVideo} />}
     </div>
   )
 }
